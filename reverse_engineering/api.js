@@ -11,7 +11,7 @@ module.exports = {
 
 	getDbCollectionsNames: function(connectionInfo, logger, cb) {
 		logger.log('info', connectionInfo, 'Reverse-Engineering connection settings', connectionInfo.hiddenKeys);
-		getKeyspacesList((err, res) => {
+		getKeyspacesList(connectionInfo, (err, res) => {
 			if(err){
 				logger.log('error', err);
 				cb(err);
@@ -33,7 +33,7 @@ module.exports = {
 		logger.log('info', { KeyspacesList: keyspacesList }, 'Selected keyspaces list', connectionInfo.hiddenKeys);
 
 		async.map(keyspacesList, (keyspaceName, keyspaceItemCallback) => {
-			readKeyspaceByName(keyspaceName, (err, keySpace) => {
+			readKeyspaceByName(keyspaceName, connectionInfo, (err, keySpace) => {
 				if(err){
 					console.log(err);
 					logger.log('error', err);
@@ -71,12 +71,16 @@ module.exports = {
 	}
 }
 
-function getRequestOptions(){
+function getRequestOptions(connectionInfo){
 	let date = new Date().toUTCString();
+	let credentials = `${connectionInfo.couchbase_username}:${connectionInfo.couchbase_password}`;
+	let encodedCredentials = new Buffer(credentials).toString('base64');
+	let token = `Basic ${encodedCredentials}`;
 
 	let headers = {
 		'Cache-Control': 'no-cache',
 		'x-ms-date': date,
+		'Authorization': token,
 		'x-ms-version': '2017-01-19',
 		'Accept': 'application/json'
 	};
@@ -87,8 +91,8 @@ function getRequestOptions(){
 	};
 }
 
-function fetchRequest(query){
-	let options = getRequestOptions();
+function fetchRequest(query, connectionInfo){
+	let options = getRequestOptions(connectionInfo);
 
 	return fetch(query, options)
 		.then(res => {
@@ -105,7 +109,7 @@ function fetchRequest(query){
 
 function handleKeyspace(connectionInfo, keyspacesNames, logger, cb){
 	async.map(keyspacesNames, (keyspaceName, keyspaceItemCallback) => {
-		readKeyspaceByName(keyspaceName, (err, keySpace) => {
+		readKeyspaceByName(keyspaceName, connectionInfo, (err, keySpace) => {
 			if(err){
 				console.log(err);
 				logger.log('error', err);
@@ -113,7 +117,7 @@ function handleKeyspace(connectionInfo, keyspacesNames, logger, cb){
 			} else {
 				let size = /*getSampleDocSize(amount, connectionInfo.recordSamplingSettings) ||*/ 1000;
 
-				getCollectionsList(keyspaceName, size, (err, collectionList) => {
+				getCollectionsList(keyspaceName, size, connectionInfo, (err, collectionList) => {
 					if(err){
 						console.log(err);
 						return keyspaceItemCallback(err);
@@ -135,27 +139,27 @@ function handleKeyspace(connectionInfo, keyspacesNames, logger, cb){
 	});
 }
 
-function getKeyspacesList(cb){
+function getKeyspacesList(connectionInfo, cb){
 	//let query = '/api/v1/keyspaces';
 	let query = 'https://api.myjson.com/bins/mr4hb';
-	return fetchRequest(query).then(res => {
+	return fetchRequest(query, connectionInfo).then(res => {
 		return cb(null, res);
 	});
 }
 
-function readKeyspaceByName(keyspaceName, cb){
+function readKeyspaceByName(keyspaceName, connectionInfo, cb){
 	//let query = `/api/v1/keyspaces/${keyspaceName}`;
 	let query = 'https://api.myjson.com/bins/124blr';
-	return fetchRequest(query).then(res => {
+	return fetchRequest(query, connectionInfo).then(res => {
 		res.data.name = keyspaceName;
 		return cb(null, res);
 	});
 }
 
-function getCollectionsList(keyspaceName, size, cb){
+function getCollectionsList(keyspaceName, size, connectionInfo, cb){
 	//let query = `/api/v1/keyspaces/${keyspaceName}/collections`;
 	let query = 'https://api.myjson.com/bins/uqjpb';
-	return fetchRequest(query).then(res => {
+	return fetchRequest(query, connectionInfo).then(res => {
 		return cb(null, res);
 	});
 }
