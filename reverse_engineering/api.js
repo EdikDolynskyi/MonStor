@@ -1,4 +1,6 @@
 'use strict';
+const async = require('async');
+const fetch = require('node-fetch');
 
 module.exports = {
 	connect: function(connectionInfo, logger, cb){
@@ -16,18 +18,16 @@ module.exports = {
 		getKeyspacesList((err, res) => {
 			let keyspacesNames = res.data.map(ks => ks.name);
 			handleKeyspace(connectionInfo, keyspacesNames, cb);
-		};
+		});
 	}
 }
 
 
 function getRequestOptions(){
 	let date = new Date().toUTCString();
-	let authToken = '';
 
 	let headers = {
 		'Cache-Control': 'no-cache',
-		'authorization': authToken,
 		'x-ms-date': date,
 		'x-ms-version': '2017-01-19',
 		'Accept': 'application/json'
@@ -40,7 +40,7 @@ function getRequestOptions(){
 }
 
 function fetchRequest(query){
-	let options = getRequestOptions(REST, config);
+	let options = getRequestOptions();
 
 	return fetch(query, options)
 		.then(res => {
@@ -88,18 +88,19 @@ function handleKeyspace(connectionInfo, keyspacesNames, cb){
 }
 
 function getKeyspacesList(cb){
-	let query = '/api/v1/keyspaces';
-	// return fetchRequest(query).then(res => {
-	// 	return res;
-	// });
+	//let query = '/api/v1/keyspaces';
+	let query = 'https://api.myjson.com/bins/mr4hb';
+	return fetchRequest(query).then(res => {
+		return cb(null, res);
+	});
 	
-	let data = {
-	  "apiVersion": "v1",
-	  "kind": "KeyspaceList",
-	  "data": [{name: 'Keyspace1'}, {name: 'Keyspace2'}]
-	};
+	// let data = {
+	//   "apiVersion": "v1",
+	//   "kind": "KeyspaceList",
+	//   "data": [{name: 'Keyspace1'}, {name: 'Keyspace2'}]
+	// };
 
-	return cb(null, data);
+	// return cb(null, data);
 }
 
 function readKeyspaceByName(keyspaceName, cb){
@@ -117,8 +118,9 @@ function readKeyspaceByName(keyspaceName, cb){
 	return cb(null, data);
 }
 
-function getCollectionsList(keyspaceName){
-	let query = `/api/v1/keyspaces/${keyspaceName}`;
+function getCollectionsList(keyspaceName, size, cb){
+	//let query = `/api/v1/keyspaces/${keyspaceName}/collections`;
+	//let query = 'https://api.myjson.com/bins/140p0v';
 	// return fetchRequest(query).then(res => {
 	// 	return res;
 	// });
