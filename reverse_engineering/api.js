@@ -19,9 +19,55 @@ module.exports = {
 			let keyspacesNames = res.data.map(ks => ks.name);
 			handleKeyspace(connectionInfo, keyspacesNames, cb);
 		});
+	},
+
+	getDbCollectionsData: function(connectionInfo, logger, cb){
+		let includeEmptyCollection = connectionInfo.includeEmptyCollection;
+		let { recordSamplingSettings, fieldInference } = connectionInfo;
+		let keyspacesList = connectionInfo.collectionData.dataBaseNames;
+		
+		logger.log('info', connectionInfo, 'Reverse-Engineering connection settings', connectionInfo.hiddenKeys);
+		logger.log('info', getSamplingInfo(recordSamplingSettings, fieldInference), 'Reverse-Engineering sampling params', connectionInfo.hiddenKeys);
+		logger.log('info', { KeyspacesList: keyspacesList }, 'Selected keyspaces list', connectionInfo.hiddenKeys);
+
+		async.map(keyspacesList, (keyspaceName, keyspaceItemCallback) => {
+			readKeyspaceByName(keyspaceName, (err, keySpace) => {
+				if(err){
+					console.log(err);
+					logger.log('error', err);
+					return keyspaceItemCallback(err)
+				} else {
+					let collectionList = connectionInfo.collectionData.collections[keyspaceName];
+					async.map(collectionList, (collectionName, collectionItemCallback) => {
+						let documentsPackage = {
+							dbName: keyspaceName,
+							collectionName,
+							documents: [],
+							indexes: [],
+							bucketIndexes: [],
+							views: [],
+							validation: false,
+							bucketInfo: {}
+						};
+						return collectionItemCallback(null, documentsPackage);
+					}, (err, items) => {
+						if(err){
+							console.log(err);
+							logger.log('error', err);
+						}
+						return keyspaceItemCallback(err, items);
+					});
+				}
+			});
+		}, (err, items) => {
+			if(err){
+				console.log(err);
+				logger.log('error', err);
+			}
+			return cb(err, items);
+		});
 	}
 }
-
 
 function getRequestOptions(){
 	let date = new Date().toUTCString();
@@ -48,7 +94,6 @@ function fetchRequest(query){
 		})
 		.then(body => {
 			body = JSON.parse(body);
-			console.log(body);
 			return body;
 		})
 		.catch(err => {
@@ -93,86 +138,23 @@ function getKeyspacesList(cb){
 	return fetchRequest(query).then(res => {
 		return cb(null, res);
 	});
-	
-	// let data = {
-	//   "apiVersion": "v1",
-	//   "kind": "KeyspaceList",
-	//   "data": [{name: 'Keyspace1'}, {name: 'Keyspace2'}]
-	// };
-
-	// return cb(null, data);
 }
 
 function readKeyspaceByName(keyspaceName, cb){
-	let query = `/api/v1/keyspaces/${keyspaceName}`;
-	// return fetchRequest(query).then(res => {
-	// 	return res;
-	// });
-
-	let data = {
-	  "apiVersion": "v1",
-	  "kind": "KeyspaceList",
-	  "data": { name: keyspaceName }
-	};
-
-	return cb(null, data);
+	//let query = `/api/v1/keyspaces/${keyspaceName}`;
+	let query = 'https://api.myjson.com/bins/124blr';
+	return fetchRequest(query).then(res => {
+		res.data.name = keyspaceName;
+		return cb(null, res);
+	});
 }
 
 function getCollectionsList(keyspaceName, size, cb){
 	//let query = `/api/v1/keyspaces/${keyspaceName}/collections`;
-	//let query = 'https://api.myjson.com/bins/140p0v';
-	// return fetchRequest(query).then(res => {
-	// 	return res;
-	// });
-	
-	let data = {
-		"apiVersion": "v1",
-		"kind": "CollectionList",
-		"data": [
-			{
-				"id": 0,
-				"name": "string",
-				"keyType": "LONG",
-				"children": [
-					null
-				],
-				"indices": [
-					{
-						"name": "string",
-						"fields": [
-							{
-								"name": "string",
-								"order": "Asc"
-							}
-						],
-						"cardinality": "Unique"
-					}
-				]
-			},
-			{
-				"id": 0,
-				"name": "string",
-				"keyType": "LONG",
-				"children": [
-					null
-				],
-				"indices": [
-					{
-						"name": "string",
-						"fields": [
-							{
-								"name": "string",
-								"order": "Asc"
-							}
-						],
-						"cardinality": "Unique"
-					}
-				]
-			}
-		]
-	};
-
-	return cb(null, data);
+	let query = 'https://api.myjson.com/bins/uqjpb';
+	return fetchRequest(query).then(res => {
+		return cb(null, res);
+	});
 }
 
 function prepareConnectionDataItem(keyspaceName, collectionNames){
@@ -182,4 +164,13 @@ function prepareConnectionDataItem(keyspaceName, collectionNames){
 	};
 
 	return connectionDataItem;
+}
+
+function getSamplingInfo(recordSamplingSettings, fieldInference){
+	let samplingInfo = {};
+	let value = recordSamplingSettings[recordSamplingSettings.active].value;
+	let unit = (recordSamplingSettings.active === 'relative') ? '%' : ' records max';
+	samplingInfo.recordSampling = `${recordSamplingSettings.active} ${value}${unit}`
+	samplingInfo.fieldInference = (fieldInference.active === 'field') ? 'keep field order' : 'alphabetical order';
+	return samplingInfo;
 }
