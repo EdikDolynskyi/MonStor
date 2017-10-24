@@ -15,9 +15,11 @@ module.exports = {
 	},
 
 	getDbCollectionsNames: function(connectionInfo, logger, cb) {
+		logger.log('info', connectionInfo, 'Reverse-Engineering connection settings', connectionInfo.hiddenKeys);
 		getKeyspacesList((err, res) => {
 			let keyspacesNames = res.data.map(ks => ks.name);
-			handleKeyspace(connectionInfo, keyspacesNames, cb);
+			logger.log('info', { KeyspacesList: res.data }, 'Keyspaces list for current database', connectionInfo.hiddenKeys);
+			handleKeyspace(connectionInfo, keyspacesNames, logger, cb);
 		});
 	},
 
@@ -101,7 +103,7 @@ function fetchRequest(query){
 		});
 }
 
-function handleKeyspace(connectionInfo, keyspacesNames, cb){
+function handleKeyspace(connectionInfo, keyspacesNames, logger, cb){
 	async.map(keyspacesNames, (keyspaceName, keyspaceItemCallback) => {
 		readKeyspaceByName(keyspaceName, (err, keySpace) => {
 			if(err){
@@ -116,6 +118,7 @@ function handleKeyspace(connectionInfo, keyspacesNames, cb){
 						console.log(err);
 						return keyspaceItemCallback(err);
 					} else {
+						logger.log('info', { CollectionList: collectionList }, 'Collection list for current database', connectionInfo.hiddenKeys);
 						let collectionNames = collectionList.data.map(coll => coll.name);
 						let dataItem = prepareConnectionDataItem(keyspaceName, collectionNames);
 						return keyspaceItemCallback(err, dataItem);
