@@ -3,23 +3,23 @@ const async = require('async');
 const fetch = require('node-fetch');
 
 module.exports = {
-	connect: function(connectionInfo, logger, cb){
-		cb()
-	},
-
-	disconnect: function(connectionInfo, logger, cb){
-		cb()
-	},
-
 	testConnection: function(connectionInfo, logger, cb){
+		this.getDbCollectionsNames(connectionInfo, logger, (err, res) => {
+			return cb(Boolean(err));
+		});
 	},
 
 	getDbCollectionsNames: function(connectionInfo, logger, cb) {
 		logger.log('info', connectionInfo, 'Reverse-Engineering connection settings', connectionInfo.hiddenKeys);
 		getKeyspacesList((err, res) => {
-			let keyspacesNames = res.data.map(ks => ks.name);
-			logger.log('info', { KeyspacesList: res.data }, 'Keyspaces list for current database', connectionInfo.hiddenKeys);
-			handleKeyspace(connectionInfo, keyspacesNames, logger, cb);
+			if(err){
+				logger.log('error', err);
+				cb(err);
+			} else {
+				let keyspacesNames = res.data.map(ks => ks.name);
+				logger.log('info', { KeyspacesList: res.data }, 'Keyspaces list for current database', connectionInfo.hiddenKeys);
+				handleKeyspace(connectionInfo, keyspacesNames, logger, cb);
+			}
 		});
 	},
 
