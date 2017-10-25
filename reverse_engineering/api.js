@@ -91,13 +91,21 @@ function getRequestOptions(connectionInfo){
 
 function fetchRequest(query, connectionInfo){
 	let options = getRequestOptions(connectionInfo);
+	let response;
 
 	return fetch(query, options)
 		.then(res => {
+			response = res;
 			return res.text();
 		})
 		.then(body => {
 			body = JSON.parse(body);
+
+			if(!response.ok){
+				throw {
+					message: res.statusText, code: res.status, description: body
+				};
+			}
 			return body;
 		})
 		.catch(err => {
@@ -138,7 +146,7 @@ function handleKeyspace(connectionInfo, keyspacesNames, logger, cb){
 }
 
 function getKeyspacesList(connectionInfo, cb){
-	//let query = '/api/v1/keyspaces';
+	//let query = `${connectionInfo.host}:${connectionInfo.port}/api/v1/keyspaces`;
 	let query = 'https://api.myjson.com/bins/mr4hb';
 	return fetchRequest(query, connectionInfo).then(res => {
 		return cb(null, res);
@@ -146,7 +154,7 @@ function getKeyspacesList(connectionInfo, cb){
 }
 
 function readKeyspaceByName(keyspaceName, connectionInfo, cb){
-	//let query = `/api/v1/keyspaces/${keyspaceName}`;
+	//let query = `${connectionInfo.host}:${connectionInfo.port}/api/v1/keyspaces/${keyspaceName}`;
 	let query = 'https://api.myjson.com/bins/124blr';
 	return fetchRequest(query, connectionInfo).then(res => {
 		res.data.name = keyspaceName;
@@ -155,7 +163,7 @@ function readKeyspaceByName(keyspaceName, connectionInfo, cb){
 }
 
 function getCollectionsList(keyspaceName, size, connectionInfo, cb){
-	//let query = `/api/v1/keyspaces/${keyspaceName}/collections`;
+	//let query = `${connectionInfo.host}:${connectionInfo.port}/api/v1/keyspaces/${keyspaceName}/collections`;
 	let query = 'https://api.myjson.com/bins/uqjpb';
 	return fetchRequest(query, connectionInfo).then(res => {
 		return cb(null, res);
