@@ -72,18 +72,16 @@ module.exports = {
 }
 
 function getRequestOptions(connectionInfo){
-	let date = new Date().toUTCString();
-	let credentials = `${connectionInfo.couchbase_username}:${connectionInfo.couchbase_password}`;
-	let encodedCredentials = new Buffer(credentials).toString('base64');
-	let token = `Basic ${encodedCredentials}`;
-
 	let headers = {
 		'Cache-Control': 'no-cache',
-		'x-ms-date': date,
-		'Authorization': token,
-		'x-ms-version': '2017-01-19',
 		'Accept': 'application/json'
 	};
+
+	if(connectionInfo.useAuth && connectionInfo.userName && connectionInfo.password){
+		let credentials = `${connectionInfo.userName}:${connectionInfo.password}`;
+		let encodedCredentials = new Buffer(credentials).toString('base64');
+		headers.Authorization = `Basic ${encodedCredentials}`;
+	}
 
 	return {
 		'method': 'GET',
